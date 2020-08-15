@@ -1,0 +1,14 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# mp4
+*.mp4
+
+# config file
+credentials.py
+
+# pretrain model
+pretrained_model/
+
