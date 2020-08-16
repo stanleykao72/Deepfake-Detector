@@ -51,7 +51,7 @@ def im_test(front_face_detector, lmark_predictor, sample_num, net, im, input_siz
         
         rois = torch.from_numpy(np.array(rois)).float()
         if cuda:
-            rois = roid.cuda()
+            rois = rois.cuda()
         rois = rois.permute((0, 3, 1, 2))
         prob = net(rois - bgr_mean)
         prob = F.softmax(prob, dim=1)
