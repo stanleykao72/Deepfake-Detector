@@ -8,8 +8,7 @@ from aiohttp import web
 import aioredis
 from aiohttp import WSCloseCode
 import json
-from deepfake_detection import deepfake_detection, load_model
-from dsp_fwa_inference import dsp_fwa_inference
+from detector_inference import detector_inference
 import logging
 
 LOGGING_FORMAT = '%(asctime)s %(levelname)s: %(message)s'
@@ -92,21 +91,23 @@ async def listen_to_websocket(ws, app, channel_id):
             message_id = params["message_id"]
             predit_video = params["predit_video"]
 
-            if model_name == 'SPPNet':
-                logger.info("getting start SPPNet")
-                await dsp_fwa_inference(video_path, model_path, output_path, threshold,
-                                        start_frame=start_frame, end_frame=end_frame, cuda=False)
-                logger.info("End SPPNet")
-            if model_name == 'XceptionNet':
-                logger.info("getting start XceptionNet")
-                await deepfake_detection(video_path, model_path, output_path,
-                                         start_frame=start_frame, end_frame=end_frame, cuda=False)
-                logger.info("End XceptionNet")
-            if model_name == 'EfficentnetB7':
-                logger.info("getting start EfficentnetB7")
-                await dsp_fwa_inference(video_path, model_path, output_path, threshold,
-                                        start_frame=start_frame, end_frame=end_frame, cuda=False)
-                logger.info("End EfficentnetB7")
+            await detector_inference(model_name, video_path, model_path, output_path, threshold, start_frame, end_frame, cuda)
+
+            # if model_name == 'SPPNet':
+            #     logger.info("getting start SPPNet")
+            #     await dsp_fwa_inference(video_path, model_path, output_path, threshold,
+            #                             start_frame=start_frame, end_frame=end_frame, cuda=False)
+            #     logger.info("End SPPNet")
+            # if model_name == 'XceptionNet':
+            #     logger.info("getting start XceptionNet")
+            #     await deepfake_detection(video_path, model_path, output_path,
+            #                              start_frame=start_frame, end_frame=end_frame, cuda=False)
+            #     logger.info("End XceptionNet")
+            # if model_name == 'EfficentnetB7':
+            #     logger.info("getting start EfficentnetB7")
+            #     await dsp_fwa_inference(video_path, model_path, output_path, threshold,
+            #                             start_frame=start_frame, end_frame=end_frame, cuda=False)
+            #     logger.info("End EfficentnetB7")
 
             # logger.info("Message received from client--msg.data: ", msg.data)
             # logger.info("Message received from client--type: ", type(json.loads(msg.data)))

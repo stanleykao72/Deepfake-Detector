@@ -1,8 +1,5 @@
 #!/usr/bin/env python
 # coding: utf-8
-"""
-Dual Spatial Pyramid for exposing face warp artifacts in DeepFake videos (DSP-FWA)
-"""
 import time
 import torch
 import torch.nn.functional as F
@@ -13,9 +10,14 @@ import numpy as np
 import pandas as pd
 from py_utils.face_utils import lib
 from py_utils.vid_utils import proc_vid as pv
-from py_utils.DL.pytorch_utils.models.classifier import SPPNet
+from py_utils.DL.sppnet.models.classifier import SPPNet
+from py_utils.DL.efficientnet.models.classifiers import DeepFakeClassifier  ## for EfficientNet
+from py_utils.DL.xceptionnet.models import model_selection   ## for Xception Network
+
 from tqdm import tqdm
 import random
+import re
+
 
 import logging
 
@@ -51,7 +53,7 @@ def im_test(front_face_detector, lmark_predictor, sample_num, net, im, input_siz
         
         rois = torch.from_numpy(np.array(rois)).float()
         if cuda:
-            rois = roid.cuda()
+            rois = rois.cuda()
         rois = rois.permute((0, 3, 1, 2))
         prob = net(rois - bgr_mean)
         prob = F.softmax(prob, dim=1)
@@ -60,7 +62,7 @@ def im_test(front_face_detector, lmark_predictor, sample_num, net, im, input_siz
     return prob, face_info
 
 
-def draw_face_score(im, face_info, prob, threshold):
+def draw_face_score(model_name, im, face_info, prob, threshold):
     if len(face_info) == 0:
         return im
 
@@ -82,14 +84,78 @@ def draw_face_score(im, face_info, prob, threshold):
     cv2.rectangle(im, (x1, y1), (x2, y2), color, 10)
     font = cv2.FONT_HERSHEY_SIMPLEX
     cv2.putText(im, f'{prob:.3f}=>{label}', (x1, y1 - 10), font, 1, color, 3, cv2.LINE_AA)
-    model_name = 'SPPNet'
     cv2.putText(im, f'Model:{model_name}', (50, 50), font, 1, (0, 255, 255), 3, cv2.LINE_AA)
     return im
 
 
-async def dsp_fwa_inference(video_path, model_path, output_path, threshold,
-                            start_frame=0, end_frame=None, cuda=False):
-    print('Starting: {}'.format(video_path))
+def load_network_xception(model_path, cuda=True):
+    # Load network
+    net = model_selection(modelname='xception', num_out_classes=2, dropout=0.5)
+    # load training weight
+    if cuda:
+        net.load_state_dict(torch.load(model_path))
+    else:
+        net.load_state_dict(torch.load(model_path, map_location='cpu'))
+
+    if isinstance(net, torch.nn.DataParallel):
+        net = net.module
+    if cuda:
+        net = net.cuda()
+    # logger.info(f'loaded Xception model {net}')
+    return net
+
+
+def load_network_sppnet(model_path, cuda=True):
+    try:
+        # load network
+        net = SPPNet(backbone=50, num_class=2)
+        if cuda:
+            net = net.cuda()
+        net.eval()
+    except Exception as e:
+        logger.info(f'load network:{e}')
+    try:
+        # load training weight
+        if cuda:
+            checkpoint = torch.load(model_path)
+        else:
+            checkpoint = torch.load(model_path, map_location='cpu')
+        logger.info(checkpoint.keys())
+        start_epoch = checkpoint['epoch']
+        net.load_state_dict(checkpoint['net'])
+    except Exception as e:
+        logger.info(f"load weight:{e}")
+    # logger.info(f'loaded SPPNet model {net}')
+    return net
+
+
+def load_network_efficientnet(model_path, cuda=True):
+    try:
+        # load network
+        net = DeepFakeClassifier(encoder="tf_efficientnet_b7_ns")
+        if cuda:
+            net = net.cuda()
+        net.eval()
+    except Exception as e:
+        logger.info(f'load network:{e}')
+    try:
+        # load training weight
+        if cuda:
+            checkpoint = torch.load(model_path)
+        else:
+            checkpoint = torch.load(model_path, map_location='cpu')
+        logger.info(checkpoint.keys())
+        state_dict = checkpoint.get("state_dict", checkpoint)
+        net.load_state_dict({re.sub("^module.", "", k): v for k, v in state_dict.items()}, strict=False)
+    except Exception as e:
+        logger.info(f"load weight:{e}")
+    # logger.info(f'loaded SPPNet model {net}')
+    return net
+
+
+async def detector_inference(model_name, video_path, model_path, output_path, threshold,
+                             start_frame=0, end_frame=None, cuda=False):
+    logger.info('Starting: {}'.format(video_path))
 
     video_fn = video_path.split('/')[-1].split('.')[0]+'.mp4'
     os.makedirs(output_path, exist_ok=True)
@@ -97,21 +163,16 @@ async def dsp_fwa_inference(video_path, model_path, output_path, threshold,
     sample_num = 10
     front_face_detector = dlib.get_frontal_face_detector()
     lmark_predictor = dlib.shape_predictor('./pretrained_model/shape_predictor_68_face_landmarks.dat')
-    print('Loaded front_face_detector & lmark_predictor')
+    logger.info('Loaded front_face_detector & lmark_predictor')
 
     input_size = 224
-    # load network
-    net = SPPNet(backbone=50, num_class=2)
-    # net = net.cuda()
-    net.eval()
 
-    # load training weight
-    if cuda:
-        checkpoint = torch.load(model_path)
-    else:
-        checkpoint = torch.load(model_path, map_location='cpu')
-    start_epoch = checkpoint['epoch']
-    net.load_state_dict(checkpoint['net'])
+    if model_name == 'SPPNet':
+        net = load_network_sppnet(model_path, cuda)
+    if model_name == 'XceptionNet':
+        net = load_network_xception(model_path, cuda)
+    if model_name == 'EfficientnetB7':
+        net = load_network_efficientnet(model_path, cuda)
 
     # mp4 file path
     imgs, num_frames, fps, width, height = pv.parse_vid(video_path)
@@ -123,11 +184,11 @@ async def dsp_fwa_inference(video_path, model_path, output_path, threshold,
     writer = cv2.VideoWriter(join(output_path, video_fn), fourcc, fps,
                              (height, width)[::-1])
 
+    logger.info(f'num_frames:{num_frames}, fps:{fps}, width:{width}, height:{height}')
     # Frame numbers and length of output video
     frame_num = 0
     assert start_frame < num_frames - 1
     end_frame = end_frame if end_frame else num_frames
-    pbar = tqdm(total=end_frame - start_frame)
 
     try:
         inference_num = 30
@@ -138,30 +199,22 @@ async def dsp_fwa_inference(video_path, model_path, output_path, threshold,
         logger.info(f'imgs:{type(imgs)}')
     except Exception as e:
         logger.info(e)
-    # print('Begin tqdm.....')
+
+    pbar = tqdm(total=end_frame - start_frame)
 
     try:
-        #for fid in sample_frames:
         for fid, im in enumerate(imgs):
-            #frame_num += 1
-            #im = imgs[fid]
 
-            if frame_num < start_frame:
-                continue
+            #if frame_num < start_frame:
+            #    continue
             pbar.update(1)
 
             if fid in sample_frames:
             # print('Frame: ' + str(fid))
                 prob, face_info = im_test(front_face_detector, lmark_predictor, sample_num, net, im, input_size, cuda)
-                im = draw_face_score(im, face_info, prob, threshold)
+                im = draw_face_score(model_name, im, face_info, prob, threshold)
             else:
-                im = draw_face_score(im, face_info, prob, threshold)
-            # if frame_num >= end_frame:
-            #     break
-
-            # # for testing 
-            # if frame_num > 10:
-            #     break
+                im = draw_face_score(model_name, im, face_info, prob, threshold)
 
             writer.write(im)
     except Exception as e:
@@ -170,17 +223,44 @@ async def dsp_fwa_inference(video_path, model_path, output_path, threshold,
     
     if writer is not None:
         writer.release()
-        print('Finished! Output saved under {}'.format(output_path))
+        logger.info('Finished! Output saved under {}'.format(output_path))
     else:
-        print('Input video file was empty')
+        logger.info('Input video file was empty')
+
 
 if __name__ == '__main__':
+    # SPPNet
+    model_name = 'SPPNet'
     model_path = './pretrained_model/SPP-res50.pth'
-    video_path = './predict/data/clb_fake_id9_id2_0000.mp4'
+    video_path = './predict/data/data_dst.mp4'
     output_path = './output/'
     threshold = 0.5
-    cuda = False
+    cuda = True
     start_frame = 0
     end_frame = None
 
-    dsp_fwa_inference(video_path, model_path, output_path, threshold, start_frame, end_frame, cuda)
+    detector_inference(model_name, video_path, model_path, output_path, threshold, start_frame, end_frame, cuda)
+
+    # XceptionNet
+    model_name = 'XceptionNet'
+    model_path = './pretrained_model/df_c0_best.pkl'
+    video_path = './predict/data/data_dst.mp4'
+    output_path = './output/'
+    threshold = 0.5
+    cuda = True
+    start_frame = 0
+    end_frame = None
+
+    detector_inference(model_name, video_path, model_path, output_path, threshold, start_frame, end_frame, cuda)
+
+    # EfficientnetB7
+    model_name = 'EfficientnetB7'
+    model_path = './pretrained_model/b7_111_DeepFakeClassifier_tf_efficientnet_b7_ns_0_0'
+    video_path = './predict/data/data_dst.mp4'
+    output_path = './output/'
+    threshold = 0.5
+    cuda = True
+    start_frame = 0
+    end_frame = None
+
+    detector_inference(model_name, video_path, model_path, output_path, threshold, start_frame, end_frame, cuda)

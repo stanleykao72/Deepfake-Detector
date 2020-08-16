@@ -185,23 +185,23 @@ async def cmd_video(message: types.Message):
         await message.reply(f"{username}, please send /websocket command first, thanks!")
 
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True, selective=True)
-    markup.add("EfficentnetB7", "SPPNet", "XceptionNet")
+    markup.add("EfficientnetB7", "SPPNet", "XceptionNet")
 
     await message.reply("Please choose a model from BUTTON", reply_markup=markup)
 
 
-@dp.message_handler(lambda message: message.text not in ["EfficentnetB7", "SPPNet", "XceptionNet"], state=VideoForm.model)
+@dp.message_handler(lambda message: message.text not in ["EfficientnetB7", "SPPNet", "XceptionNet"], state=VideoForm.model)
 async def process_model_invalid(message: types.Message, state: FSMContext):
     """
-    In this example gender has to be one of: EfficentnetB7, SPPNet, XceptionNet.
+    In this example gender has to be one of: EfficientnetB7, SPPNet, XceptionNet.
     """
-    logger.info(f'not in EfficentnetB7/SPPNET/XceptionNext......')
+    logger.info(f'not in EfficientnetB7/SPPNET/XceptionNext......')
     logger.info(f'chat id in process_model_invalid: {message.chat.id}')
 
-    return await message.reply("Bad controller. Choose EfficentnetB7/SPPNET/XceptionNet from the BUTTON.")
+    return await message.reply("Bad controller. Choose EfficientnetB7/SPPNET/XceptionNet from the BUTTON.")
 
 
-@dp.message_handler(lambda message: message.text in ["EfficentnetB7", "SPPNet", "XceptionNet"], state=VideoForm.model)
+@dp.message_handler(lambda message: message.text in ["EfficientnetB7", "SPPNet", "XceptionNet"], state=VideoForm.model)
 async def process_model(message: types.Message, state: FSMContext):
     logger.info(f'chat id in process_model: {message.chat.id}')
 
@@ -265,7 +265,7 @@ async def process_video(message: types.Message, state: FSMContext):
             model_path = './pretrained_model/SPP-res50.pth'
         if model_name == 'XceptionNet':
             model_path = './pretrained_model/df_c0_best.pkl'
-        if model_name == 'EfficentnetB7':
+        if model_name == 'EfficientnetB7':
             model_path = './pretrained_model/b7_111_DeepFakeClassifier_tf_efficientnet_b7_ns_0_0'
 
     logger.info(f'10......0')
@@ -284,6 +284,7 @@ async def process_video(message: types.Message, state: FSMContext):
             logger.info(message.animation)
             logger.info(message.animation.file_id)
             file_id = message.animation.file_id
+        # message.document:
         else:
             logger.info("it's not a mp4 video, please upload a mp4 video")
     except Exception as e:
