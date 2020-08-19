@@ -14,10 +14,15 @@ from py_utils.DL.sppnet.models.classifier import SPPNet
 from py_utils.DL.efficientnet.models.classifiers import DeepFakeClassifier  ## for EfficientNet
 from py_utils.DL.xceptionnet.models import model_selection   ## for Xception Network
 
-from tqdm import tqdm
+from tqdm.auto import tqdm
 import random
 import re
 
+from skimage import io
+from interpretability.grad_cam import GradCAM, GradCamPlusPlus
+from interpretability.guided_back_propagation import GuidedBackPropagation
+from interpretability.utils import (get_last_conv_name, prepare_input,
+                                    gen_cam, norm_image, gen_gb, save_image)
 
 import logging
 
@@ -153,11 +158,86 @@ def load_network_efficientnet(model_path, cuda=True):
     return net
 
 
-async def detector_inference(model_name, video_path, model_path, output_path, threshold,
+def grad_cam(frame, model_name, cam_model, net, im, im_size, class_idx=None, cuda=False):
+
+    # img = np.float32(cv2.resize(im, (im_size, im_size))) / 255
+    img = np.float32(im)/255
+    inputs = prepare_input(img)
+    if cuda:
+        inputs = inputs.cuda()
+
+    # print(inputs.shape)
+    # 输出图像
+    image_dict = {}
+
+    layer_name = get_last_conv_name(net)
+    # print(layer_name)
+
+    # Grad-CAM
+    if cam_model == 'GradCAM':
+        grad_cam = GradCAM(net, layer_name)
+        mask = grad_cam(inputs, class_idx)  # cam mask
+        # mask = cv2.resize(mask, (im.shape[1], im.shape[0]), interpolation=cv2.INTER_CUBIC)
+        image_dict['GradCAM'], image_dict['heatmap'] = gen_cam(img, mask)
+        grad_cam.remove_handlers()
+    # Grad-CAM++
+    if cam_model == 'GradCAMpp':
+        #logger.info('1')
+        grad_cam_plus_plus = GradCamPlusPlus(net, layer_name)
+        #logger.info('2')
+
+        mask_plus_plus = grad_cam_plus_plus(inputs, class_idx)  # cam mask
+        # mask_plus_plus = cv2.resize(mask_plus_plus, (im.shape[1], im.shape[0]), interpolation=cv2.INTER_CUBIC)
+        #logger.info('3')
+
+        image_dict['GradCAMpp'], image_dict['heatmap++'] = gen_cam(img, mask_plus_plus)
+        #logger.info('4')
+
+        grad_cam_plus_plus.remove_handlers()
+        #logger.info('5')
+
+
+#     # GuidedBackPropagation
+#     gbp = GuidedBackPropagation(net)
+#     inputs.grad.zero_()  # 梯度置零
+#     grad = gbp(inputs)
+    
+#     gb = gen_gb(grad)
+#     image_dict['gb'] = norm_image(gb)
+    
+#     # 生成Guided Grad-CAM
+#     cam_gb = gb * mask[..., np.newaxis]
+#     image_dict['cam_gb'] = norm_image(cam_gb)
+    # save_image(image_dict, str(frame), 'net', './output')
+
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    cv2.putText(image_dict[cam_model], f'Model:{model_name}', (50, 50), font, 1, (0, 255, 255), 1, cv2.LINE_AA)
+    return image_dict[cam_model]
+
+
+def sample_frames(start_frame, end_frame, num):
+    try:
+        # num = 30
+        sample_list = [random.randint(start_frame, end_frame) for _ in range(num)]
+        sample_list.extend([0])
+        sample_list = sorted(set(sample_list))
+        logger.info(f'sample_frames:{sample_list}')
+    except Exception as e:
+        logger.info(f'sample_frames:{e}')
+    return sample_list
+
+
+async def detector_inference(model_name, video_path, model_path, output_path, threshold, cam,
                              start_frame=0, end_frame=None, cuda=False):
     logger.info('Starting: {}'.format(video_path))
 
-    video_fn = video_path.split('/')[-1].split('.')[0]+'.mp4'
+    cam_model = 'GradCAMpp'
+    logger.info('set cam model')
+
+    video_fn = video_path.split('/')[-1].split('.')[0]
+    video_fn_cam = f'{video_fn}_{model_name}_{cam_model}.mp4'
+    video_fn = f'{video_fn}_{model_name}.mp4'
+
     os.makedirs(output_path, exist_ok=True)
 
     sample_num = 10
@@ -166,13 +246,17 @@ async def detector_inference(model_name, video_path, model_path, output_path, th
     logger.info('Loaded front_face_detector & lmark_predictor')
 
     input_size = 224
+    class_idx = 0
 
     if model_name == 'SPPNet':
         net = load_network_sppnet(model_path, cuda)
+        logger.info('Loaded SPPNet')
     if model_name == 'XceptionNet':
         net = load_network_xception(model_path, cuda)
+        logger.info('Loaded XceptionNet')
     if model_name == 'EfficientnetB7':
         net = load_network_efficientnet(model_path, cuda)
+        logger.info('Loaded EfficientnetB7')
 
     # mp4 file path
     imgs, num_frames, fps, width, height = pv.parse_vid(video_path)
@@ -181,8 +265,12 @@ async def detector_inference(model_name, video_path, model_path, output_path, th
     # reader = cv2.VideoCapture(video_path)
     fourcc = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
     writer = None
+    writer_cam = None
     writer = cv2.VideoWriter(join(output_path, video_fn), fourcc, fps,
                              (height, width)[::-1])
+    writer_cam = cv2.VideoWriter(join(output_path, video_fn_cam), fourcc, fps,
+                                (height, width)[::-1])
+
 
     logger.info(f'num_frames:{num_frames}, fps:{fps}, width:{width}, height:{height}')
     # Frame numbers and length of output video
@@ -191,38 +279,43 @@ async def detector_inference(model_name, video_path, model_path, output_path, th
     end_frame = end_frame if end_frame else num_frames
 
     try:
-        inference_num = 30
-        sample_frames = [random.randint(start_frame, end_frame) for _ in range(inference_num)]
-        sample_frames.extend([0])
-        sample_frames = sorted(set(sample_frames))
-        logger.info(f'sample_frames:{sample_frames}')
-        logger.info(f'imgs:{type(imgs)}')
-    except Exception as e:
-        logger.info(e)
+        if cam:
+            cam_list = sample_frames(start_frame, end_frame, 1)
+            pbar = tqdm(total=len(cam_list))
+            for fid, im in enumerate(imgs):
+                if fid in cam_list:
+                    pbar.update(1)
+                    #if fid <= 30:
+                    cam_im = grad_cam(fid, model_name, cam_model, net, im, input_size, class_idx, cuda)            
+                    writer_cam.write(cam_im)
+                    #else:
+                    #    break
+            pbar.close()
 
-    pbar = tqdm(total=end_frame - start_frame)
-
-    try:
+        sample_list = sample_frames(start_frame, end_frame, 30)
+        pbar = tqdm(total=end_frame - start_frame)
         for fid, im in enumerate(imgs):
-
-            #if frame_num < start_frame:
-            #    continue
             pbar.update(1)
 
-            if fid in sample_frames:
+            if fid in sample_list:
+
             # print('Frame: ' + str(fid))
                 prob, face_info = im_test(front_face_detector, lmark_predictor, sample_num, net, im, input_size, cuda)
-                im = draw_face_score(model_name, im, face_info, prob, threshold)
+                bnd_im = draw_face_score(model_name, im, face_info, prob, threshold)
             else:
-                im = draw_face_score(model_name, im, face_info, prob, threshold)
-
-            writer.write(im)
+                bnd_im = draw_face_score(model_name, im, face_info, prob, threshold)
+            writer.write(bnd_im)
+            
     except Exception as e:
-        print(e)
+        logger.info(f'generate image:{e}')
     pbar.close()
-    
     if writer is not None:
         writer.release()
+        logger.info('Finished! Output saved under {}'.format(output_path))
+    else:
+        logger.info('Input video file was empty')
+    if writer_cam is not None:
+        writer_cam.release()
         logger.info('Finished! Output saved under {}'.format(output_path))
     else:
         logger.info('Input video file was empty')
@@ -232,35 +325,41 @@ if __name__ == '__main__':
     # SPPNet
     model_name = 'SPPNet'
     model_path = './pretrained_model/SPP-res50.pth'
-    video_path = './predict/data/data_dst.mp4'
+    #video_path = './predict/data/data_dst.mp4'
+    video_path = './predict/data/Trump_AndyLiu_2.mp4'
     output_path = './output/'
     threshold = 0.5
-    cuda = True
+    cam = False
+    cuda = False
     start_frame = 0
     end_frame = None
 
-    detector_inference(model_name, video_path, model_path, output_path, threshold, start_frame, end_frame, cuda)
+    detector_inference(model_name, video_path, model_path, output_path, threshold, cam, start_frame, end_frame, cuda)
 
     # XceptionNet
     model_name = 'XceptionNet'
     model_path = './pretrained_model/df_c0_best.pkl'
-    video_path = './predict/data/data_dst.mp4'
+    #video_path = './predict/data/data_dst.mp4'
+    video_path = './predict/data/Trump_AndyLiu_2.mp4'
     output_path = './output/'
     threshold = 0.5
+    cam = True
     cuda = True
     start_frame = 0
     end_frame = None
 
-    detector_inference(model_name, video_path, model_path, output_path, threshold, start_frame, end_frame, cuda)
+    detector_inference(model_name, video_path, model_path, output_path, threshold, cam, start_frame, end_frame, cuda)
 
     # EfficientnetB7
     model_name = 'EfficientnetB7'
     model_path = './pretrained_model/b7_111_DeepFakeClassifier_tf_efficientnet_b7_ns_0_0'
-    video_path = './predict/data/data_dst.mp4'
+    #video_path = './predict/data/data_dst.mp4'
+    video_path = './predict/data/Trump_AndyLiu_2.mp4'
     output_path = './output/'
     threshold = 0.5
+    cam = True
     cuda = True
     start_frame = 0
     end_frame = None
 
-    detector_inference(model_name, video_path, model_path, output_path, threshold, start_frame, end_frame, cuda)
+    detector_inference(model_name, video_path, model_path, output_path, threshold, cam, start_frame, end_frame, cuda)

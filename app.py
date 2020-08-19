@@ -112,6 +112,8 @@ async def websocket_conn(session, ws_url):
                     message_id = params["message_id"]
                     predit_video = params["predit_video"]
                     chat_id = params["chat_id"]
+                    cam = params["cam"]
+                    cam_video = params["cam_video"]
                     logger.info(f'message_id:{message_id}, predit_video:{predit_video}')
                 except Exception as e:
                     logger.info(e)
@@ -126,6 +128,10 @@ async def websocket_conn(session, ws_url):
                     await bot.send_document(chat_id,
                                             types.InputFile(predit_video),
                                             reply_to_message_id=message_id)
+                    if cam:
+                        await bot.send_document(chat_id,
+                                                types.InputFile(cam_video),
+                                                reply_to_message_id=message_id)
                     await ws.close()
                     ws_post.pop(types.User.get_current().id)
 
@@ -313,18 +319,21 @@ async def process_video(message: types.Message, state: FSMContext):
     # await message.reply(f'This image is {inference(model, data_path, imagename)}')
     video_path = videoname
     predit_video = output_path + file_id + '.mp4'
+    cam_video = output_path + 'cam_' + file_id + '.mp4'
     await message.reply("wait for detecting video......................")
     param_json = {"model_name" : model_name
                   , "video_path" : video_path
                   , "model_path" : model_path
                   , "output_path" : output_path
                   , "threshold" : 0.5
+                  , "cam" : False
                   , "start_frame" : 0
                   , "end_frame" : None
                   , "cuda" : False
                   , "chat_id" : message.chat.id
                   , "message_id" : message.message_id
-                  , "predit_video" : predit_video}
+                  , "predit_video" : predit_video
+                  , "cam_video" : cam_video}
 
     logger.info(f'35......')
     try:
