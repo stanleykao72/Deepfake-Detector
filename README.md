@@ -27,7 +27,7 @@ download and put them in .\pretrained_model folder
 
 > xxx_bot    ==> for bot_user_name
 3. You will got a TOKEN like '110201543:XXHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw'  ==> for bot_token
-4. edit ./BOT/credentials.py
+4. cp ./BOT/credentials_template.py to ./BOT/credentials.py, and edit credentials.py
 
 > import os
 > 
