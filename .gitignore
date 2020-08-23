@@ -10,7 +10,11 @@ __pycache__/
 credentials.py
 
 # pretrain model
-pretrained_model/
+pretrained_model/df_c0_best.pkl
+pretrained_model/mmod_human_face_detector.dat
+pretrained_model/shape_predictor_68_face_landmarks.dat
+pretrained_model/SPP-res50.pth
+pretrained_model/tf_efficientnet_b7_ns_spp_last
 
 # md file
 # README.md
