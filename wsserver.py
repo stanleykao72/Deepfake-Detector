@@ -92,8 +92,9 @@ async def listen_to_websocket(ws, app, channel_id):
             message_id = params["message_id"]
             predit_video = params["predit_video"]
             cam_video = params["cam_video"]
+            cam_model = params["cam_model"]
 
-            await detector_inference(model_name, video_path, model_path, output_path, threshold, cam, start_frame, end_frame, cuda)
+            await detector_inference(model_name, video_path, model_path, output_path, threshold, cam, cam_model, predit_video, cam_video, start_frame, end_frame, cuda)
 
             # if model_name == 'SPPNet':
             #     logger.info("getting start SPPNet")

@@ -16,8 +16,6 @@ import json
 from datetime import datetime
 
 import imageio
-#from predict.tl_inception_resnet import load_model, inference
-#from detect_from_video import test_full_image_network, load_model
 
 import asyncio
 
@@ -42,6 +40,8 @@ WS_PORT = int(os.getenv("WS_PORT", 8888))
 # global channel_id
 # channel_id = ''
 
+cam_model = 'GradCAMpp'
+
 LOGGING_FORMAT = '%(asctime)s %(levelname)s: %(message)s'
 DATE_FORMAT = '%Y%m%d %H:%M:%S'
 logging.basicConfig(level=logging.INFO, format=LOGGING_FORMAT, datefmt=DATE_FORMAT)
@@ -55,14 +55,10 @@ media = types.MediaGroup()
 
 
 # load model
-data_path = './predict/data/'
+data_path = './input/'
 
 output_path = './output/'
 #load_model(model_path, cuda=False)
-
-# dp = Dispatcher(bot)
-# dp.middleware.setup(LoggingMiddleware())
-
 
 # States
 class VideoForm(StatesGroup):
@@ -272,7 +268,7 @@ async def process_video(message: types.Message, state: FSMContext):
         if model_name == 'XceptionNet':
             model_path = './pretrained_model/df_c0_best.pkl'
         if model_name == 'EfficientnetB7':
-            model_path = './pretrained_model/b7_111_DeepFakeClassifier_tf_efficientnet_b7_ns_0_0'
+            model_path = './pretrained_model/tf_efficientnet_b7_ns_spp_last'
 
     logger.info(f'10......0')
 
@@ -318,22 +314,23 @@ async def process_video(message: types.Message, state: FSMContext):
     # ##### inference #########
     # await message.reply(f'This image is {inference(model, data_path, imagename)}')
     video_path = videoname
-    predit_video = output_path + file_id + '.mp4'
-    cam_video = output_path + 'cam_' + file_id + '.mp4'
+    predit_video = f'{output_path}{file_id}_{model_name}.mp4'
+    cam_video = f'{output_path}{file_id}_{model_name}_{cam_model}.mp4'
     await message.reply("wait for detecting video......................")
     param_json = {"model_name" : model_name
                   , "video_path" : video_path
                   , "model_path" : model_path
                   , "output_path" : output_path
                   , "threshold" : 0.5
-                  , "cam" : False
+                  , "cam" : True
                   , "start_frame" : 0
                   , "end_frame" : None
                   , "cuda" : False
                   , "chat_id" : message.chat.id
                   , "message_id" : message.message_id
                   , "predit_video" : predit_video
-                  , "cam_video" : cam_video}
+                  , "cam_video" : cam_video
+                  , "cam_model" : cam_model}
 
     logger.info(f'35......')
     try:

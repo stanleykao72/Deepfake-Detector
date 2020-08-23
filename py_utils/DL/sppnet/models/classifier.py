@@ -4,6 +4,7 @@ from torch import nn
 from torchvision import models
 import torch.nn.functional as F
 import os, math
+from torch.nn.modules.pooling import AdaptiveAvgPool2d, AdaptiveMaxPool2d
 
 
 class ResNet(nn.Module):
@@ -45,7 +46,6 @@ class ResNet(nn.Module):
         x = x.view(x.size(0), -1)
         x = self.fc(x)
         return x
-
 
 
 class SPPNet(nn.Module):
@@ -90,13 +90,13 @@ class SpatialPyramidPool2D(nn.Module):
         # batch_size, c, h, w = x.size()
         out = None
         for n in self.out_side:
-            w_r, h_r = map(lambda s: math.ceil(s / n), x.size()[2:])  # Receptive Field Size
-            s_w, s_h = map(lambda s: math.floor(s / n), x.size()[2:])  # Stride
-            max_pool = nn.MaxPool2d(kernel_size=(w_r, h_r), stride=(s_w, s_h))
+#             w_r, h_r = map(lambda s: math.ceil(s / n), x.size()[2:])  # Receptive Field Size
+#             s_w, s_h = map(lambda s: math.floor(s / n), x.size()[2:])  # Stride
+#             max_pool = nn.MaxPool2d(kernel_size=(w_r, h_r), stride=(s_w, s_h))
+            max_pool = AdaptiveMaxPool2d(output_size=(n, n))
             y = max_pool(x)
             if out is None:
                 out = y.view(y.size()[0], -1)
             else:
                 out = torch.cat((out, y.view(y.size()[0], -1)), 1)
         return out
-
