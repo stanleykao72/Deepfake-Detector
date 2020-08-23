@@ -4,7 +4,7 @@
 `conda create -n Deepfake-Detector python=3.7`
 
 ## Install & Requirements
-The code has been tested on pytorch=1.3.1 and python 3.6, please refer to `requirements.txt` for more details.
+The code has been tested on pytorch=1.6.0 and python 3.7, please refer to `requirements.txt` for more details.
 ### To install the python packages
 `python -m pip install -r requiremnets.txt`
 
