@@ -9,9 +9,9 @@ The code has been tested on pytorch=1.6.0 and python 3.7, please refer to `requi
 `python -m pip install -r requiremnets.txt`
 
 ## Pretrained Model
-1. [XceptionNet]: (https://drive.google.com/drive/folders/1GNtk3hLq6sUGZCGx8fFttvyNYH8nrQS8?usp=sharing) based on FaceForensics++
-2. [Resnet+SPPNet] : (https://drive.google.com/file/d/1PyKhf8QX13wQuE4wXNCBlaHypKWjNzq5/view?usp=sharing)
-3. [EfficientnetB7+SPPNet] : (https://drive.google.com/file/d/1x_FNPs6x73bUwmNiR7vAUDhFrLtsrlwV/view?usp=sharing)
+1. [XceptionNet](https://drive.google.com/drive/folders/1GNtk3hLq6sUGZCGx8fFttvyNYH8nrQS8?usp=sharing) based on FaceForensics++
+2. [Resnet+SPPNet](https://drive.google.com/file/d/1PyKhf8QX13wQuE4wXNCBlaHypKWjNzq5/view?usp=sharing)
+3. [EfficientnetB7+SPPNet](https://drive.google.com/file/d/1x_FNPs6x73bUwmNiR7vAUDhFrLtsrlwV/view?usp=sharing)
 
 download and put them in .\pretrained_model folder
 
