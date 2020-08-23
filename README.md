@@ -1,39 +1,55 @@
-# Deepfake-Detection
+# Deepfake-Detector
 ------------------
-The Pytorch implemention of Deepfake Detection based on [Faceforensics++](https://github.com/ondyari/FaceForensics)
+## Create new environment in Anaconda
+`conda create -n Deepfake-Detector python=3.7`
 
-We also reproduced the [MesoNet with pytorch version](https://github.com/HongguLiu/MesoNet-Pytorch), and you can use the mesonet network in this project.
 ## Install & Requirements
-The code has been tested on pytorch=1.3.1 and python 3.6, please refer to `requirements.txt` for more details.
+The code has been tested on pytorch=1.6.0 and python 3.7, please refer to `requirements.txt` for more details.
 ### To install the python packages
 `python -m pip install -r requiremnets.txt`
 
-
-## Dataset
-If you want to use the opensource dataset [Faceforensics++](https://github.com/ondyari/FaceForensics), you can use the script './download-FaceForensics_v3.py' to download the dataset accroding the instructions of [download section](https://github.com/ondyari/FaceForensics/blob/master/dataset/README.md).
-
-You can train the model with full images, but we suggest you take only face region as input.
-
 ## Pretrained Model
-The model provided just be used to test the effectiveness of our code. We suggest you train you own models based on your dataset. 
+1. [XceptionNet]: (https://drive.google.com/drive/folders/1GNtk3hLq6sUGZCGx8fFttvyNYH8nrQS8?usp=sharing) based on FaceForensics++
+2. [Resnet+SPPNet] : (https://drive.google.com/file/d/1PyKhf8QX13wQuE4wXNCBlaHypKWjNzq5/view?usp=sharing)
+3. [EfficientnetB7+SPPNet] : (https://drive.google.com/file/d/1x_FNPs6x73bUwmNiR7vAUDhFrLtsrlwV/view?usp=sharing)
 
-And we will upload models which have better performance as soon as possible.
+download and put them in .\pretrained_model folder
 
-we provide some [pretrained model](https://drive.google.com/drive/folders/1GNtk3hLq6sUGZCGx8fFttvyNYH8nrQS8?usp=sharing) based on FaceForensics++
+## Telegram BOT
+[Telegram BOT reference](https://core.telegram.org/bots#6-botfather)
+1. Search BotFather and add him
+2. send message /newbot, to create a BOT 
+> BotFather: Alright, a new bot. How are we going to call it? Please choose a name for your bot.
+>
+> xxxBot
+>
+> Good. Now let's choose a username for your bot. It must end in `bot`. Like this, for example: TetrisBot or tetris_bot.
+
+> xxx_bot    ==> for bot_user_name
+3. You will got a TOKEN like '110201543:XXHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw'  ==> for bot_token
+4. edit ./BOT/credentials.py
+
+> import os
+> 
+> bot_token = '110201543:XXHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw'
+>
+> bot_user_name = 'xxx_bot'
+>
+> URL = "https://cf45064e05ed.ngrok.io"
+
+5. You can `ngrok` to get URL, and replace URL in the credentials.py
+
+## Start service
+Use two terminals and send below command:
+1. python app.py
+2. python wsserver.py
 
 ## Usage
 **To test with videos**
-
-`python detect_from_video.py --video_path ./videos/003_000.mp4 --model_path ./pretrained_model/df_c0_best.pkl -o ./output --cuda`
-
-**To test with images**
-
-`python test_CNN.py -bz 32 --test_list ./data_list/Deepfakes_c0_299.txt --model_path ./pretrained_model/df_c0_best.pkl`
-
-**To train a model**
-
-`python train_CNN.py`
-(Please set the arguments after read the code)
+in the telegram bot(xxxBot):
+1. send /websocket message to startup websocket connection
+2. send /video message to choose model and put video in the BOT
+3. BOT will reply two videos for Real/Fake video and Grad-cam video
 
 ## About
 If our project is helpful to you, we hope you can star and fork it. If there are any questions and suggestions, please feel free to contact us.
