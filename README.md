@@ -1,7 +1,7 @@
 # Deepfake-Detector
 ------------------
 ## Create new environment in Anaconda
-conda create -n Deepfake-Detector python=3.7
+`conda create -n Deepfake-Detector python=3.7`
 
 ## Install & Requirements
 The code has been tested on pytorch=1.3.1 and python 3.6, please refer to `requirements.txt` for more details.
