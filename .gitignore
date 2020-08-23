@@ -12,3 +12,6 @@ credentials.py
 # pretrain model
 pretrained_model/
 
+# md file
+README.md
+

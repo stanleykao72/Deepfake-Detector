@@ -5,13 +5,13 @@ import torch
 import torch.nn.functional as F
 import cv2
 import os
-import dlib
+# import dlib
 from facenet_pytorch import MTCNN
 from os.path import join
 import logging
 import numpy as np
 import pandas as pd
-from py_utils.face_utils import lib
+# from py_utils.face_utils import lib
 from py_utils.vid_utils import proc_vid as pv
 from py_utils.DL.sppnet.models.classifier import SPPNet
 from py_utils.DL.efficientnet.models.classifiers import build_model

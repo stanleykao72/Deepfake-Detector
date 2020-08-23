@@ -1,11 +1,12 @@
-pytorch==1.3.1
-torchvision
-opencv==3.4.2
+torch==1.6.0
+torchvision==0.7.0
+opencv-python
+opencv_contrib-python
+facenet_pytorch
 tqdm
 aiogram
 aiohttp
 imageio==2.9.0
 imageio-ffmpeg==0.4.2
-cmake
-dlib
 aioredis
+
