@@ -19,24 +19,21 @@ download and put them in .\pretrained_model folder
 [Telegram BOT reference](https://core.telegram.org/bots#6-botfather)
 1. Search BotFather and add him
 2. send message /newbot, to create a BOT 
-> BotFather: Alright, a new bot. How are we going to call it? Please choose a name for your bot.
->
-> xxxBot
->
-> Good. Now let's choose a username for your bot. It must end in `bot`. Like this, for example: TetrisBot or tetris_bot.
+```
+* BotFather: Alright, a new bot. How are we going to call it? Please choose a name for your bot.
+* xxxBot
+* Good. Now let's choose a username for your bot. It must end in `bot`. Like this, for example: TetrisBot or tetris_bot.
 
-> xxx_bot    ==> for bot_user_name
+* xxx_bot    ==> for bot_user_name
+```
 3. You will got a TOKEN like '110201543:XXHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw'  ==> for bot_token
 4. cp ./bot/credentials_template.py to ./bot/credentials.py, and edit credentials.py
-
-> import os
-> 
-> bot_token = '110201543:XXHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw'
->
-> bot_user_name = 'xxx_bot'
->
-> URL = "https://cf45064e05ed.ngrok.io"
-
+```
+import os 
+bot_token = '110201543:XXHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw'
+bot_user_name = 'xxx_bot'
+URL = "https://cf45064e05ed.ngrok.io"
+```
 5. You can `ngrok` to get URL, and replace URL in the credentials.py
 
 ## Start service
