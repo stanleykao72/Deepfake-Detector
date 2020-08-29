@@ -15,6 +15,7 @@ pretrained_model/mmod_human_face_detector.dat
 pretrained_model/shape_predictor_68_face_landmarks.dat
 pretrained_model/SPP-res50.pth
 pretrained_model/tf_efficientnet_b7_ns_spp_last
+pretrained_model/tf_efficientnet_b7_ns_spp_last.epoch42
 
 # md file
 # README.md

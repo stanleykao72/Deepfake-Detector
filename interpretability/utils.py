@@ -106,7 +106,7 @@ def gen_cam(image, mask):
     mask = cv2.resize(mask, (image.shape[1], image.shape[0]), interpolation=cv2.INTER_CUBIC)
 
     # mask转为heatmap
-    heatmap = cv2.applyColorMap(np.uint8(255 * mask), cv2.COLORMAP_JET)
+    heatmap = cv2.applyColorMap(np.uint8(255 * mask), cv2.COLORMAP_MAGMA) # COLORMAP_HSV, COLORMAP_JET
     heatmap = np.float32(heatmap) / 255
     heatmap = heatmap[..., ::-1]  # gbr to rgb
 

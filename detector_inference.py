@@ -10,7 +10,7 @@ from facenet_pytorch import MTCNN
 from os.path import join
 import logging
 import numpy as np
-import pandas as pd
+# import pandas as pd
 # from py_utils.face_utils import lib
 from py_utils.vid_utils import proc_vid as pv
 from py_utils.DL.sppnet.models.classifier import SPPNet
@@ -78,7 +78,7 @@ def face_mtcnn(fid, model_name, net, im, input_size, cuda):
     #         inputs = isotropically_resize_image(inputs, INPUT_SIZE)
     #         inputs = padding_image(inputs, INPUT_SIZE)
     #         cv2.imwrite(f'./output/inputs_{fid}.jpg', inputs)
-    #         inputs = inputs / 255.
+            inputs = inputs / 255.
 
             face_h, face_w, _ = inputs.shape
             #logger.info(f'face shape:{inputs.shape}')
@@ -116,7 +116,8 @@ def face_mtcnn(fid, model_name, net, im, input_size, cuda):
             # im_size = 224
 
             for class_idx in [0]:
-                cam = grad_cam(fid, 'GradCAMpp', net, face, INPUT_SIZE, class_idx, cuda)
+                # cam = grad_cam(fid, 'GradCAMpp', net, face, INPUT_SIZE, class_idx, cuda)
+                cam = saliency(fid, net, inputs, face, class_idx, cuda)
                 cam_h, cam_w, _ = cam.shape
 
             ## 平移
@@ -212,9 +213,9 @@ def load_network_efficientnet(model_path, cuda=True):
         net.module.encoder.eval()
         for p in net.module.encoder.parameters():
             p.requires_grad = False
-        if cuda:
-            net = net.cuda()
-        net.eval()
+        # if cuda:
+        #     net = net.cuda()
+        # net.eval()
     except Exception as e:
         logger.info(f'load network:{e}')
     return net
@@ -230,6 +231,33 @@ def sample_frames(start_frame, end_frame, num):
     except Exception as e:
         logger.info(f'sample_frames:{e}')
     return sample_list
+
+
+def saliency(fid, net, inputs, face, class_idx, cuda):
+#     logger.info(f'saliency1:cuda->{cuda}')
+    net.eval()
+    y = [class_idx]
+    y = torch.LongTensor(y)
+    inputs.requires_grad_()
+    saliency = None
+    logits = net.forward(inputs).cpu()
+    logits = logits.gather(1, y.view(-1, 1)).squeeze() # 得到正确分类
+    #logits.backward(torch.FloatTensor([1.])) # 只计算正确分类部分的loss
+    logits.backward()
+    saliency = abs(inputs.grad.data) # 返回X的梯度绝对值大小
+#     logger.info(f'saliency1:{saliency}')
+
+    saliency, _ = torch.max(saliency, dim=1)
+#     logger.info(f'saliency2:{saliency}')
+    saliency = saliency.cpu()
+    saliency = saliency.permute((1, 2, 0))
+    saliency = saliency.numpy()
+    image_dict = {}
+    image_dict['saliency'], image_dict['heatmap_saliency'] = gen_cam(face, saliency)
+    # saliency = saliency[..., ::-1]
+
+    # cv2.imwrite(f'./output/saliency:{fid}.jpg', saliency)
+    return image_dict['saliency']
 
 
 def grad_cam(fid, cam_model, net, im, im_size, class_idx=None, cuda=False):

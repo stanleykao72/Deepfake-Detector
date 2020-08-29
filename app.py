@@ -1,4 +1,4 @@
-from bot.credentials import bot_token, bot_user_name, telegram_user_id, URL
+from bot.credentials import bot_token, bot_user_name, URL
 import os
 
 import aiohttp
@@ -15,7 +15,7 @@ import time
 import json
 from datetime import datetime
 
-import imageio
+# import imageio
 
 import asyncio
 
@@ -23,6 +23,13 @@ import logging
 
 
 global TOKEN
+
+# credentials
+# bot_token = os.getenv("bot_token")
+# bot_user_name = os.getenv("bot_user_name")
+# URL = os.getenv("URL")
+
+
 TOKEN = bot_token
 # PROJECT_NAME = os.getenv('PROJECT_NAME', 'aiogram-example')  # Set it as you've set TOKEN env var
 
@@ -36,7 +43,7 @@ WEBAPP_PORT = int(os.environ.get('PORT', 5000))
 # websocket
 WS_DOMAIN = os.getenv("WS_DOMAIN", "localhost")
 WS_HOST = os.getenv("WS_HOST", "0.0.0.0")
-WS_PORT = int(os.getenv("WS_PORT", 8888))
+WS_PORT = int(os.getenv("WS_PORT", 9999))
 # global channel_id
 # channel_id = ''
 
@@ -70,9 +77,13 @@ ws_post = {}
 
 async def fetch_wsurl(session, url, headers=None):
     async with session.get(url, headers=headers) as response:
+        logger.info(f'fetch_wsurl...')
         json = await response.json()
+        logger.info(f'fetch_wsurl...{json}')
         wsurl = json["url"]
+        logger.info(f'fetch_wsurl...{wsurl}')
         channel_id = json["channel_id"]
+        logger.info(f'fetch_wsurl...{channel_id}')
         return wsurl, channel_id
 
 
@@ -81,7 +92,7 @@ async def get_channel():
     ws_url, channel_id = await fetch_wsurl(
         session,
         f"http://{WS_DOMAIN}:{WS_PORT}/api/rtm.connect",
-        headers={"Authorization": "Token Wcw33RIhvnbxTKxTxM2rKJ7YJrwyUXhXn"},
+        headers={"Authorization": "Token Wcw33RIhvnbxTKxTxM2rKJ7YJrwyUXhXq"},
     )
     logger.info(ws_url)
     return session, ws_url, channel_id
@@ -125,14 +136,17 @@ async def websocket_conn(session, ws_url):
                                             types.InputFile(predit_video),
                                             reply_to_message_id=message_id)
                     if cam:
-                        await bot.send_document(chat_id,
-                                                types.InputFile(cam_video),
-                                                reply_to_message_id=message_id)
+                        try:
+                            await bot.send_document(chat_id,
+                                                    types.InputFile(cam_video),
+                                                    reply_to_message_id=message_id)
+                        except Exception as e:
+                            logger.error(f'cam video: {e}')
                     await ws.close()
                     ws_post.pop(types.User.get_current().id)
 
                 except Exception as e:
-                    logger.info(e)
+                    logger.error(e)
 
 
 @dp.message_handler(commands='websocket')
@@ -173,12 +187,12 @@ async def on_websocket(message: types.Message):
 async def cmd_video(message: types.Message):
     username = message.from_user.full_name
     logger.info(f'chat id in cmd_video: {message.chat.id}')
-    try:
-        logger.info(f'ws_post in cmd_video: {ws_post[types.User.get_current().id]}')
-        logger.info(f'chat_id in cmd_video: {message.chat.id}:{ws_post[types.User.get_current().id]["chat_id"].id}')
-        logger.info(f'session in cmd_video: {message.chat.id}:{ws_post[types.User.get_current().id]["session"]}')
-    except Exception as e:
-        logger.error(e)
+    # try:
+    #     logger.info(f'ws_post in cmd_video: {ws_post[types.User.get_current().id]}')
+    #     logger.info(f'chat_id in cmd_video: {message.chat.id}:{ws_post[types.User.get_current().id]["chat_id"].id}')
+    #     logger.info(f'session in cmd_video: {message.chat.id}:{ws_post[types.User.get_current().id]["session"]}')
+    # except Exception as e:
+    #     logger.error(e)
     if ws_post[types.User.get_current().id]["session"]:
         # Set state
         await VideoForm.model.set()

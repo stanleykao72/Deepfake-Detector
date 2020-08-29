@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 WS_DOMAIN = os.getenv("WS_DOMAIN", "localhost")
 WS_HOST = os.getenv("WS_HOST", "0.0.0.0")
-WS_PORT = int(os.getenv("WS_PORT", 8888))
+WS_PORT = int(os.getenv("WS_PORT", 9999))
 
 routes = web.RouteTableDef()
 
@@ -48,9 +48,11 @@ async def wsticket_handler(request):
     # 實作可在此檢查認證資訊, 通過後產生一個時效性 ticket, 儲存至認證用快取/資料庫等, 供其他服務查閱
     # 最後回覆 websocket 的時效性 url
     channel_id = secrets.token_urlsafe(32)
+    logger.info(f"/api/rtm.connect: channel_id -> {channel_id}")
     ws_url = (
         f"ws://{WS_DOMAIN}:{WS_PORT}/ws/{channel_id}"
     )  # 生產環境應為加密的 wss
+    logger.info(f"/api/rtm.connect: ws_url -> {ws_url}")
 
     return aiohttp.web.json_response({"url": ws_url, "channel_id": channel_id})
 
@@ -133,10 +135,10 @@ async def listen_to_redis(app, channel_id):
         logger.info(f"Channel created: {ch_name}")
 
         ws = app["websockets"][channel_id]
-        # logger.info(f'ws in  redis: {ws}')
+        logger.info(f'ws in  redis: {ws}')
         while await channel.wait_message():
             msg = await channel.get(encoding="utf-8")
-            # logger.info(f'print redis msg:{msg}')
+            logger.info(f'print redis msg:{msg}')
             await ws.send_str(msg)
         await conn.execute_pubsub("unsubscribe", ch_name)
     except Exception as e:

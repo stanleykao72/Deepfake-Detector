@@ -1,0 +1,17 @@
+version: '3.4'
+
+services:
+  deepfakedetection:
+    image: deepfakedetection
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile
+    entrypoint: /bin/bash
+    command: -c "pip install debugpy -t /tmp && python /tmp/debugpy --wait-for-client --listen 0.0.0.0:5678 app.py"
+    ports:
+      - 5678:5678
+    environment:
+      - bot_token=1168941932:AAGiYEV79cjssoQX_rZ5IwE4nbFhliKlh5M
+      - bot_user_name=imagedetect_bot
+      - URL=https://cf45064e05ed.ngrok.io
+
